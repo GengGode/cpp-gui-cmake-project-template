@@ -1,0 +1,22 @@
+{
+  "dependencies": [
+    "fmt",
+    "spdlog",
+    "gtest",
+    {
+      "name": "imgui",
+      "features": [
+        "docking-experimental",
+        "glfw-binding",
+        "vulkan-binding"
+      ]
+    },
+    "implot",
+    {
+      "name": "opencv",
+      "features": [
+        "opengl"
+      ]
+    }
+  ]
+}

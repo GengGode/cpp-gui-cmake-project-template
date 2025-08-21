@@ -14,18 +14,18 @@ const char* get_version()
 }
 const char* error_code_info(int error_code)
 {
-    if (error_code < 0 || error_code >= static_cast<int>(::error_invoker::locations.size()))
+    if (error_code < 0 || error_code >= static_cast<int>(global::error_invoker::locations.size()))
     {
         return "Unknown error code";
     }
-    return ::error_invoker::locations[error_code].error_msg.c_str();
+    return global::error_invoker::locations[error_code].error_msg.c_str();
 }
 
 #include <fmt/format.h>
 #include <iostream>
 int test()
 {
-    for (auto& errdef : ::error_invoker::locations)
+    for (auto& errdef : global::error_invoker::locations)
         std::cout << fmt::format("Error: {}:{}:{}: {}", errdef.path, errdef.line, errdef.col, errdef.error_msg) << std::endl;
     return code_err("测试错误: {}", "shared test info");
 }

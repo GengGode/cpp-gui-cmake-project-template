@@ -10,7 +10,7 @@
     #include <spdlog/spdlog.h>
     #define HAS_SPDLOG 1
 #endif
-namespace
+namespace global
 {
     template <size_t n> struct source_location
     {
@@ -51,12 +51,6 @@ namespace
         template <typename err_fun, typename... Args> static auto callback(err_fun& f, Args&&... args) { return f(args...); }
     };
 
-    inline const char* error_code_info(int error_code)
-    {
-        if (error_code < 0 || static_cast<size_t>(error_code) >= ::error_invoker::locations.size())
-            return "未知错误";
-        return ::error_invoker::locations[error_code].error_msg.c_str();
-    }
     inline int error_impl(const char* sz)
     {
         int index = 0;
@@ -69,8 +63,9 @@ namespace
         return index;
     }
 
-#define reg_err(msg) \
-    ::error_proxy<::error_invoker, ::source_location(__FILE__, std::source_location::current().line(), std::source_location::current().column()), ::error_message(msg)>::callback(::error_impl, msg)
+#define register_error(msg)                                                                                                                                         \
+    global::error_proxy<global::error_invoker, global::source_location(__FILE__, std::source_location::current().line(), std::source_location::current().column()), \
+                        global::error_message(msg)>::callback(global::error_impl, msg)
 
 #if defined(HAS_SPDLOG)
     #undef HAS_SPDLOG
@@ -78,14 +73,21 @@ namespace
         [&](int code) {                                    \
             spdlog::error(msg __VA_OPT__(, ) __VA_ARGS__); \
             return code;                                   \
-        }(reg_err(msg))
-    #define false_err(msg, ...)                            \
+        }(register_error(msg))
+    #define flag_err(msg, ...)                             \
         [&](int code) {                                    \
             spdlog::error(msg __VA_OPT__(, ) __VA_ARGS__); \
             return false;                                  \
-        }(reg_err(msg))
+        }(register_error(msg))
 #else
-    #define code_err(msg, ...) reg_err(msg)
-    #define false_err(msg, ...) reg_err(msg)
+    #define code_err(msg, ...) register_error(msg)
+    #define flag_err(msg, ...) (register_error(msg) == 0)
 #endif
-} // namespace
+
+    inline const char* get_error_code_info(int error_code)
+    {
+        if (error_code < 0 || static_cast<size_t>(error_code) >= global::error_invoker::locations.size())
+            return "未知错误";
+        return global::error_invoker::locations[error_code].error_msg.c_str();
+    }
+} // namespace global

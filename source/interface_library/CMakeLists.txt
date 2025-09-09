@@ -27,17 +27,10 @@ target_include_directories(cpp_gui_cmake_project_template.interface
         $<INSTALL_INTERFACE:include>
 )
 
-target_sources(cpp_gui_cmake_project_template.interface
-    INTERFACE
-        global_regerr.hpp
-        parallel_container
-)
-
-
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 target_link_libraries(cpp_gui_cmake_project_template.interface
     INTERFACE
-        fmt::fmt
-        spdlog::spdlog
+        fmt::fmt-header-only
+        spdlog::spdlog_header_only
 )

@@ -15,10 +15,18 @@ const char* error_code_info(int error_code)
     return global::error_invoker::locations[error_code].error_msg.c_str();
 }
 
+#include <application.hpp>
+#include <backend_opengl.hpp>
 #include <executor.hpp>
+#include <platform_glfw.hpp>
 int executor_build()
 {
-    auto exec = executor();
+    auto exec = std::make_shared<executor>();
+    auto app = std::make_shared<application>();
+    auto platform = std::make_shared<platform_glfw>();
+    auto backend = std::make_shared<backend_opengl>();
 
-    return exec.execute(nullptr);
+    app->set_backend(backend);
+    app->set_platform(platform);
+    return exec->execute(app);
 }

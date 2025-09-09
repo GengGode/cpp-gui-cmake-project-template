@@ -9,8 +9,8 @@
 class executor : public interface_executor
 {
 public:
-    int execute(std::shared_ptr<interface_gui> gui) override;
-    void async_execute(std::shared_ptr<interface_gui> gui) override;
+    int execute(std::shared_ptr<interface_application> app) override;
+    void async_execute(std::shared_ptr<interface_application> app) override;
 
     void sync_wait_initialization() override;
     void sync_wait_destruction() override;

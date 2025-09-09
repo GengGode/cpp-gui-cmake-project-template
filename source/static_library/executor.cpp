@@ -1,5 +1,5 @@
 #include "executor.hpp"
-#include <interface_gui.hpp>
+#include <interface_application.hpp>
 
 #include <global-register-error.hpp>
 
@@ -9,7 +9,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-int executor::execute(std::shared_ptr<interface_gui> gui)
+int executor::execute(std::shared_ptr<interface_application> app)
 {
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     auto msvc_sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
@@ -20,28 +20,28 @@ int executor::execute(std::shared_ptr<interface_gui> gui)
 
     SPDLOG_INFO("started");
 
-    if (!gui)
+    if (!app)
     {
         initialization_latch.count_down();
         destruction_latch.count_down();
-        return code_err("gui is nullptr");
+        return code_err("app is nullptr");
     }
 
     // Initialization code
-    if (auto init_result = gui->initialize(); init_result != 0)
+    if (auto init_result = app->initialize(); init_result != 0)
     {
         initialization_latch.count_down();
         destruction_latch.count_down();
-        return code_err("gui failed to initialize, init_result = {}", init_result);
+        return code_err("app failed to initialize, init_result = {}", init_result);
     }
     initialization_latch.count_down();
 
     // Rendering loop
     auto token = stop_source.get_token();
-    gui->render_loop(token);
+    app->render_loop(token);
 
     // Destruction code
-    gui->destroy();
+    app->destroy();
     destruction_latch.count_down();
 
     SPDLOG_INFO("stopped");
@@ -51,9 +51,9 @@ int executor::execute(std::shared_ptr<interface_gui> gui)
     return 0;
 }
 
-void executor::async_execute(std::shared_ptr<interface_gui> gui)
+void executor::async_execute(std::shared_ptr<interface_application> app)
 {
-    worker_thread = std::jthread([this, gui]() { this->execute(gui); });
+    worker_thread = std::jthread([this, app]() { this->execute(app); });
 }
 
 void executor::sync_wait_initialization()

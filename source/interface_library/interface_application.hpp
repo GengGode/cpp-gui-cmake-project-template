@@ -3,14 +3,14 @@
 #include <stop_token>
 
 struct interface_platform;
-struct interface_gui
+struct interface_backend;
+struct interface_application
 {
     // Pure virtual destructor must have a definition, but not inline with the pure-specifier.
-    virtual ~interface_gui() = 0;
+    virtual ~interface_application() = 0;
 
-    virtual void set_window_title(const char* title) = 0;
-    virtual void set_window_size(int width, int height) = 0;
     virtual void set_platform(std::shared_ptr<interface_platform> platform) = 0;
+    virtual void set_backend(std::shared_ptr<interface_backend> backend) = 0;
 
     virtual int initialize() = 0;
     virtual void render_loop(std::stop_token& token) = 0;
@@ -18,14 +18,14 @@ struct interface_gui
 };
 
 // Provide the required definition for the pure virtual destructor.
-inline interface_gui::~interface_gui() = default;
+inline interface_application::~interface_application() = default;
 
 // namespace std
 // {
 //     class stop_token;
 // }
 // struct interface_backend_wrapper;
-// struct interface_gui_wrapper
+// struct interface_application_wrapper
 // {
 //     struct impl_t;
 //     impl_t* impl;

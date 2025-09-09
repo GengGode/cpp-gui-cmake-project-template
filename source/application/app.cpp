@@ -16,9 +16,9 @@ int main(int argc, char* argv[])
     std::cout << "Hello, World! 测试中文" << std::endl;
     std::cout << "Version: " << get_version() << std::endl;
 
-    int error_code = 0;
+    int error_code = executor_build();
     if (error_code != 0)
-        std::cerr << "Error occurred: " << error_code_info(error_code) << std::endl;
+        std::cerr << "Error: " << error_code_info(error_code) << std::endl;
 
     return 0;
 }

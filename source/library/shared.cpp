@@ -14,3 +14,11 @@ const char* error_code_info(int error_code)
     }
     return global::error_invoker::locations[error_code].error_msg.c_str();
 }
+
+#include <executor.hpp>
+int executor_build()
+{
+    auto exec = executor();
+
+    return exec.execute(nullptr);
+}

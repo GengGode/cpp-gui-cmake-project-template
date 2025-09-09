@@ -30,8 +30,8 @@ target_include_directories(cpp_gui_cmake_project_template.static
 target_sources(cpp_gui_cmake_project_template.static
     PUBLIC
         static.cpp
-        static.hpp
     PRIVATE
+        executor.cpp
 )
 
 target_link_libraries(cpp_gui_cmake_project_template.static

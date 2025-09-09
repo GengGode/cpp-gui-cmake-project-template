@@ -21,6 +21,8 @@ extern "C"
     cpp_gui_cmake_project_template_identifier_API const char* get_version();
     cpp_gui_cmake_project_template_identifier_API const char* error_code_info(int error_code);
 
+    cpp_gui_cmake_project_template_identifier_API int executor_build();
+
 #ifdef __cplusplus
 }
 #endif

@@ -31,11 +31,7 @@ target_sources(cpp_gui_cmake_project_template.static
     PUBLIC
         static.cpp
         static.hpp
-        debugger.hpp
-        watcher.hpp
     PRIVATE
-        debugger.cpp
-        watcher.cpp
 )
 
 target_link_libraries(cpp_gui_cmake_project_template.static
@@ -43,13 +39,17 @@ target_link_libraries(cpp_gui_cmake_project_template.static
         cpp_gui_cmake_project_template.interface
 )
 
-find_package(fmt REQUIRED)
+find_package(global_utils CONFIG REQUIRED)
+target_link_libraries(cpp_gui_cmake_project_template.static
+    PUBLIC
+        global_utils::global_utils
+)
+
 find_package(imgui CONFIG REQUIRED)
 find_package(implot CONFIG REQUIRED)
 find_package(OpenCV REQUIRED)
 target_link_libraries(cpp_gui_cmake_project_template.static
     PUBLIC
-        fmt::fmt
         imgui::imgui
         implot::implot
         ${OpenCV_LIBS}

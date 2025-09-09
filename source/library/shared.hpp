@@ -20,11 +20,6 @@ extern "C"
 
     cpp_gui_cmake_project_template_identifier_API const char* get_version();
     cpp_gui_cmake_project_template_identifier_API const char* error_code_info(int error_code);
-    cpp_gui_cmake_project_template_identifier_API int test();
-
-    cpp_gui_cmake_project_template_identifier_API int debugger_initialize();
-    cpp_gui_cmake_project_template_identifier_API int debugger_execute(bool auto_destroy = true);
-    cpp_gui_cmake_project_template_identifier_API int debugger_destroy();
 
 #ifdef __cplusplus
 }

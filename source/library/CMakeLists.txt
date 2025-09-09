@@ -23,6 +23,7 @@ endif()
 target_compile_definitions(cpp_gui_cmake_project_template
     PRIVATE
         cpp_gui_cmake_project_template_identifier_EXPORTS
+        cpp_gui_cmake_project_template_identifier_VERSION_STRING="${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
 )
 
 target_include_directories(cpp_gui_cmake_project_template
@@ -40,13 +41,6 @@ target_sources(cpp_gui_cmake_project_template
 )
 
 target_link_libraries(cpp_gui_cmake_project_template
-    PUBLIC
+    PRIVATE
         cpp_gui_cmake_project_template.static
-)
-
-
-find_package(fmt REQUIRED)
-target_link_libraries(cpp_gui_cmake_project_template
-    PUBLIC
-        fmt::fmt
 )

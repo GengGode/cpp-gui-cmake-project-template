@@ -1,4 +1,5 @@
 # cmake project based settings
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -11,9 +12,14 @@ set(CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/install")
 set(CMAKE_INSTALL_RPATH "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-list(APPEND CMAKE_PREFIX_PATH "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
-
 set(deps_dir "${CMAKE_SOURCE_DIR}/deps_party")
 set(third_dir "${CMAKE_SOURCE_DIR}/third_party")
 set(modules_dir "${CMAKE_SOURCE_DIR}/modules")
 set(samples_dir "${CMAKE_SOURCE_DIR}/samples")
+
+list(APPEND CMAKE_PREFIX_PATH "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+file(GLOB deps_party_folders LIST_DIRECTORIES true "${deps_dir}/*")
+foreach(dir ${deps_party_folders})
+    list(APPEND CMAKE_PREFIX_PATH ${dir})
+endforeach()
+

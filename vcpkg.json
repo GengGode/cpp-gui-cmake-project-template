@@ -10,7 +10,13 @@
     "spdlog",
     "glm",
     "glfw3",
-    "glad",
+    {
+      "name": "glad",
+      "features": [
+        "gl-api-latest",
+        "extensions"
+      ]
+    },
     {
       "name": "imgui",
       "features": [

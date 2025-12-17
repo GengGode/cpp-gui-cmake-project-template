@@ -5,6 +5,7 @@ struct application : public interface_application
 {
     void set_platform(std::shared_ptr<interface_platform> platform) override;
     void set_backend(std::shared_ptr<interface_backend> backend) override;
+    void set_frame(std::shared_ptr<interface_frame> frame) override;
 
     int initialize() override;
     void render_loop(std::stop_token& token) override;
@@ -13,4 +14,5 @@ struct application : public interface_application
 private:
     std::shared_ptr<interface_platform> platform;
     std::shared_ptr<interface_backend> backend;
+    std::shared_ptr<interface_frame> frame;
 };

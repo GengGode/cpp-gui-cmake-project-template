@@ -18,9 +18,11 @@ int backend_opengl::initialize(std::shared_ptr<interface_platform> platform)
     this->platform = platform;
     if (!gladLoadGL())
         return code_err("failed to initialize glad");
-    auto glsl_version = "#version 130";
+    auto glsl_version = "#version 460";
     if (!ImGui_ImplOpenGL3_Init(glsl_version))
         return code_err("failed to initialize ImGui OpenGL3 backend");
+    const GLubyte* version = glGetString(GL_VERSION);
+    SPDLOG_INFO("OpenGL Version: {}", (const char*)version);
     return 0;
 }
 void backend_opengl::new_frame()

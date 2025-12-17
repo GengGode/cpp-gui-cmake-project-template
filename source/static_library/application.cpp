@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include <interface_backend.hpp>
+#include <interface_frame.hpp>
 #include <interface_platform.hpp>
 
 #include <global-register-error.hpp>
@@ -13,6 +14,10 @@ void application::set_platform(std::shared_ptr<interface_platform> platform)
 void application::set_backend(std::shared_ptr<interface_backend> backend)
 {
     this->backend = backend;
+}
+void application::set_frame(std::shared_ptr<interface_frame> frame)
+{
+    this->frame = frame;
 }
 int application::initialize()
 {
@@ -34,6 +39,11 @@ int application::initialize()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\msyh.ttc", 20.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
 
+    if (frame)
+    {
+        if (auto init_result = frame->initialize(); init_result != 0)
+            return code_err("frame failed to initialize, init_result = {}", init_result);
+    }
     return 0;
 }
 void application::render_loop(std::stop_token& token)
@@ -52,7 +62,8 @@ void application::render_loop(std::stop_token& token)
         backend->new_frame();
         ImGui::NewFrame();
         // (Your ImGui rendering code would go here)
-        ImGui::ShowDemoWindow();
+        if (frame)
+            frame->next_frame();
 
         ImGui::Render();
         backend->render_draw_data();
@@ -60,6 +71,8 @@ void application::render_loop(std::stop_token& token)
 }
 void application::destroy()
 {
+    if (frame)
+        frame->destroy();
     if (backend)
         backend->destroy();
     if (platform)

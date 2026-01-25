@@ -34,6 +34,7 @@ class image_watcher
             float zoom = 1.0f;
             ImVec2 offset = { 0, 0 };
             std::string pixel_info_text;
+            bool need_fit = true;
         } view;
 
     public:
@@ -123,6 +124,12 @@ class image_watcher
             ImGui::Text("%s - %dx%d %s", selected_name.data(), texture_width, texture_height, type_info.c_str());
             ImGui::SameLine();
             ImGui::Text("缩放: %.1f%%", view.zoom * 100);
+            auto calc_center_offset = [&](float zoom, ImVec2 canvas_size) -> ImVec2 {
+                float img_w = texture_width * zoom;
+                float img_h = texture_height * zoom;
+                return { (canvas_size.x - img_w) / 2, (canvas_size.y - img_h) / 2 };
+            };
+
             ImGui::SameLine();
             if (ImGui::Button("适应"))
             {
@@ -130,13 +137,14 @@ class image_watcher
                 float scale_x = avail.x / texture_width;
                 float scale_y = (avail.y - 30) / texture_height;
                 view.zoom = std::min(scale_x, scale_y) * 0.95f;
-                view.offset = { 0, 0 };
+                view.offset = calc_center_offset(view.zoom, { avail.x, avail.y - 30 });
             }
             ImGui::SameLine();
             if (ImGui::Button("1:1"))
             {
+                ImVec2 avail = ImGui::GetContentRegionAvail();
                 view.zoom = 1.0f;
-                view.offset = { 0, 0 };
+                view.offset = calc_center_offset(view.zoom, { avail.x, avail.y - 30 });
             }
             ImGui::SameLine();
             if (ImGui::Button("+"))
@@ -170,6 +178,18 @@ class image_watcher
             {
                 ImGui::EndChild();
                 return;
+            }
+
+            // 初始化时自动适应并居中
+            if (view.need_fit && texture_width > 0 && texture_height > 0)
+            {
+                float scale_x = canvas_size.x / texture_width;
+                float scale_y = canvas_size.y / texture_height;
+                view.zoom = std::min(scale_x, scale_y) * 0.95f;
+                float img_w = texture_width * view.zoom;
+                float img_h = texture_height * view.zoom;
+                view.offset = { (canvas_size.x - img_w) / 2, (canvas_size.y - img_h) / 2 };
+                view.need_fit = false;
             }
 
             ImGui::InvisibleButton("canvas", canvas_size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
@@ -347,6 +367,7 @@ private:
         ImGui::Button("##splitter", ImVec2(3, -1));
         if (ImGui::IsItemActive())
             left_panel_width += ImGui::GetIO().MouseDelta.x;
+        left_panel_width = std::clamp(left_panel_width, 10.0f, 600.0f);
         if (ImGui::IsItemHovered())
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
     }

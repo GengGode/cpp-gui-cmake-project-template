@@ -1,5 +1,6 @@
 #include <fmt/format.h>
-#include <shared.hpp>
+#define RUNTIME_VISUALIZER_IMPLEMENTATION
+#include <runtime-visualizer.hpp>
 
 #include <iostream>
 #include <thread>
@@ -14,11 +15,9 @@ int main(int argc, char* argv[])
     std::locale::global(std::locale("zh_CN.UTF-8"));
 
     std::cout << "Hello, World! 测试中文" << std::endl;
-    std::cout << "Version: " << get_version() << std::endl;
 
-    int error_code = executor_build();
-    if (error_code != 0)
-        std::cerr << "Error: " << error_code_info(error_code) << std::endl;
-
+    runtime_visualizer viz;
+    viz.initialize();
+    viz.wait_exit();
     return 0;
 }

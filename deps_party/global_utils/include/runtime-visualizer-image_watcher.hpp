@@ -121,8 +121,6 @@ class image_watcher
         void render_preview(std::string_view selected_name)
         {
             // 工具栏
-            ImGui::Text("%s - %dx%d %s", selected_name.data(), texture_width, texture_height, type_info.c_str());
-            ImGui::SameLine();
             ImGui::Text("缩放: %.1f%%", view.zoom * 100);
             auto calc_center_offset = [&](float zoom, ImVec2 canvas_size) -> ImVec2 {
                 float img_w = texture_width * zoom;

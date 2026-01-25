@@ -19,7 +19,7 @@ class image_watcher
 
         bool empty = true;
         bool changed = true;
-        bool expanded = false;
+        bool expanded = true;
 
         GLuint texture_id = 0;
         GLuint texture_width = 0;
@@ -108,49 +108,18 @@ class image_watcher
         }
         void render_thumbnail(std::string_view name, bool selected)
         {
-            update();
-
-            ImGui::PushID(name.data());
-            if (selected)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.26f, 0.42f, 0.56f, 1.0f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.26f, 0.42f, 0.56f, 1.0f));
-            }
-
-            bool header_open = ImGui::TreeNodeEx("##header", ImGuiTreeNodeFlags_AllowOverlap | (expanded ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (selected ? ImGuiTreeNodeFlags_Selected : 0));
-            expanded = header_open;
+            expanded = ImGui::TreeNodeEx(name.data(), ImGuiTreeNodeFlags_AllowOverlap | (expanded ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (selected ? ImGuiTreeNodeFlags_Selected : 0));
+            if (!expanded)
+                return;
+            if (empty || thumb_texture_id == 0)
+                return ImGui::TreePop();
+            ImGui::Image(static_cast<ImTextureID>(static_cast<intptr_t>(thumb_texture_id)), ImVec2(thumb_texture_width, thumb_texture_height));
             ImGui::SameLine();
-
-            if (!empty && thumb_texture_id != 0)
-            {
-                ImGui::Image(static_cast<ImTextureID>(static_cast<intptr_t>(thumb_texture_id)), ImVec2(thumb_texture_width, thumb_texture_height));
-                ImGui::SameLine();
-            }
-
-            ImGui::BeginGroup();
-            ImGui::TextColored(selected ? ImVec4(1, 1, 1, 1) : ImVec4(0.9f, 0.9f, 0.9f, 1), "%s", name.data());
-            if (!empty)
-            {
-                ImGui::TextDisabled("%d x %d", texture_width, texture_height);
-                ImGui::TextDisabled("%s", type_info.c_str());
-                ImGui::TextDisabled("cv::Mat");
-            }
-            else
-            {
-                ImGui::TextDisabled("(empty)");
-            }
-            ImGui::EndGroup();
-
-            if (selected)
-                ImGui::PopStyleColor(2);
-            if (header_open)
-                ImGui::TreePop();
-            ImGui::PopID();
+            ImGui::TextDisabled("%d x %d\n%s\ncv::Mat", texture_width, texture_height, type_info.c_str());
+            ImGui::TreePop();
         }
         void render_preview(std::string_view selected_name)
         {
-            update();
-
             // 工具栏
             ImGui::Text("%s - %dx%d %s", selected_name.data(), texture_width, texture_height, type_info.c_str());
             ImGui::SameLine();
@@ -188,15 +157,14 @@ class image_watcher
             ImGui::SameLine();
             ImGui::TextDisabled("|");
             ImGui::SameLine();
+
             ImGui::Text("像素: %s", view.pixel_info_text.c_str());
 
             view.zoom = std::clamp(view.zoom, 0.01f, 50.0f);
-            ImGui::Separator();
 
             // 图像区域
             ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
             ImVec2 canvas_size = ImGui::GetContentRegionAvail();
-            canvas_size.y -= 25;
 
             // 确保canvas尺寸有效
             if (canvas_size.x < 1.0f || canvas_size.y < 1.0f)
@@ -236,7 +204,8 @@ class image_watcher
             }
 
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            draw_list->AddRectFilled(canvas_pos, { canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y }, IM_COL32(30, 30, 30, 255));
+            draw_list->AddRectFilled(canvas_pos, { canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y }, IM_COL32(128, 128, 128, 255));
+            draw_list->PushClipRect(canvas_pos, { canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y }, true);
 
             float img_w = texture_width * view.zoom;
             float img_h = texture_height * view.zoom;
@@ -269,6 +238,7 @@ class image_watcher
                     draw_list->AddLine({ img_min.x, y }, { img_max.x, y }, grid_color);
                 }
             }
+            draw_list->PopClipRect();
 
             auto get_pixel_info = [](const cv::Mat& mat, int x, int y) -> std::string {
                 if (x < 0 || y < 0 || x >= mat.cols || y >= mat.rows)
@@ -345,7 +315,7 @@ class image_watcher
 
 public:
     void destroy() { viewers.clear(); }
-    void watch_image(const std::string& var_name, cv::Mat& image, std::function<void()> callback) { viewers[var_name] = std::move(std::make_unique<image_viewer>(image, callback)); }
+    void watch_image(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { viewers[var_name] = std::move(std::make_unique<image_viewer>(image, callback)); }
     void remove_watcher(const std::string& var_name) { viewers.erase(var_name); }
     void render()
     {
@@ -365,6 +335,7 @@ private:
         ImGui::BeginChild("List", ImVec2(left_panel_width, 0), true);
         for (auto& [name, viewer] : viewers)
         {
+            viewer->update();
             viewer->render_thumbnail(name, (name == selected_name));
             if (ImGui::IsItemClicked())
                 selected_name = name;
@@ -390,7 +361,6 @@ private:
         ImGui::BeginChild("Preview", ImVec2(0, 0), true);
         if (selected_name.empty() || viewers.find(selected_name) == viewers.end())
         {
-            ImGui::TextDisabled("No image selected.");
             ImGui::EndChild();
             return;
         }

@@ -33,7 +33,14 @@ int main(int argc, char* argv[])
         g_image_watcher.render();
     });
     cv::Mat test_image = cv::Mat::zeros(480, 640, CV_8UC3);
+    cv::Mat test_image_empty;
+    cv::Mat test_image_gray = cv::Mat::zeros(480, 640, CV_8UC1);
+    cv::Mat test_image_float = cv::Mat::zeros(480, 640, CV_32FC1);
+
     g_image_watcher.watch_image("test_image", test_image, []() { std::cout << "Image updated!" << std::endl; });
+    g_image_watcher.watch_image("test_image_empty", test_image_empty);
+    g_image_watcher.watch_image("test_image_gray", test_image_gray);
+    g_image_watcher.watch_image("test_image_float", test_image_float);
 
     g_interrupter.interrupt();
     std::cout << "step 1..." << std::endl;

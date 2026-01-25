@@ -39,7 +39,7 @@ class image_watcher
 
     public:
         image_viewer(cv::Mat& image, std::function<void()> callback) : image(std::ref(image)), callback(callback) {};
-        void update()
+        void sync_state()
         {
             if (!changed)
                 return;
@@ -352,7 +352,7 @@ private:
         ImGui::BeginChild("List", ImVec2(left_panel_width, 0), true);
         for (auto& [name, viewer] : viewers)
         {
-            viewer->update();
+            viewer->sync_state();
             viewer->render_thumbnail(name, (name == selected_name));
             if (ImGui::IsItemClicked())
                 selected_name = name;

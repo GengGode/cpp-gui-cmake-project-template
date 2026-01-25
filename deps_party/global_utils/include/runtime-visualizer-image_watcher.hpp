@@ -336,7 +336,7 @@ public:
     void remove_watcher(const std::string& var_name) { viewers.erase(var_name); }
     void render()
     {
-        ImGui::Begin("Image Watch", nullptr, ImGuiWindowFlags_NoScrollbar);
+        ImGui::Begin("图像监视器", nullptr, ImGuiWindowFlags_NoScrollbar);
         render_list_viewer();
         ImGui::SameLine();
         render_splitter();

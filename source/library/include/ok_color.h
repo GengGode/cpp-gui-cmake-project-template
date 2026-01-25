@@ -64,7 +64,7 @@ namespace ok_color
 
     constexpr float pi = 3.1415926535897932384626433832795028841971693993751058209749445923078164062f;
 
-    float clamp(float x, float min, float max)
+    static inline float clamp(float x, float min, float max)
     {
         if (x < min)
             return min;
@@ -74,22 +74,22 @@ namespace ok_color
         return x;
     }
 
-    float sgn(float x)
+    static inline float sgn(float x)
     {
         return (float)(0.f < x) - (float)(x < 0.f);
     }
 
-    float srgb_transfer_function(float a)
+    static inline float srgb_transfer_function(float a)
     {
         return .0031308f >= a ? 12.92f * a : 1.055f * powf(a, .4166666666666667f) - .055f;
     }
 
-    float srgb_transfer_function_inv(float a)
+    static inline float srgb_transfer_function_inv(float a)
     {
         return .04045f < a ? powf((a + .055f) / 1.055f, 2.4f) : a / 12.92f;
     }
 
-    Lab linear_srgb_to_oklab(RGB c)
+    static inline Lab linear_srgb_to_oklab(RGB c)
     {
         float l = 0.4122214708f * c.r + 0.5363325363f * c.g + 0.0514459929f * c.b;
         float m = 0.2119034982f * c.r + 0.6806995451f * c.g + 0.1073969566f * c.b;
@@ -106,7 +106,7 @@ namespace ok_color
         };
     }
 
-    RGB oklab_to_linear_srgb(Lab c)
+    static inline RGB oklab_to_linear_srgb(Lab c)
     {
         float l_ = c.L + 0.3963377774f * c.a + 0.2158037573f * c.b;
         float m_ = c.L - 0.1055613458f * c.a - 0.0638541728f * c.b;
@@ -126,7 +126,7 @@ namespace ok_color
     // Finds the maximum saturation possible for a given hue that fits in sRGB
     // Saturation here is defined as S = C/L
     // a and b must be normalized so a^2 + b^2 == 1
-    float compute_max_saturation(float a, float b)
+    static inline float compute_max_saturation(float a, float b)
     {
         // Max saturation will be when one of r, g or b goes below zero.
 
@@ -210,7 +210,7 @@ namespace ok_color
 
     // finds L_cusp and C_cusp for a given hue
     // a and b must be normalized so a^2 + b^2 == 1
-    LC find_cusp(float a, float b)
+    static inline LC find_cusp(float a, float b)
     {
         // First, find the maximum saturation (saturation S = C/L)
         float S_cusp = compute_max_saturation(a, b);
@@ -227,7 +227,7 @@ namespace ok_color
     // L = L0 * (1 - t) + t * L1;
     // C = t * C1;
     // a and b must be normalized so a^2 + b^2 == 1
-    float find_gamut_intersection(float a, float b, float L1, float C1, float L0, LC cusp)
+    static inline float find_gamut_intersection(float a, float b, float L1, float C1, float L0, LC cusp)
     {
         // Find the intersection for upper and lower half seprately
         float t;
@@ -311,7 +311,7 @@ namespace ok_color
         return t;
     }
 
-    float find_gamut_intersection(float a, float b, float L1, float C1, float L0)
+    static inline float find_gamut_intersection(float a, float b, float L1, float C1, float L0)
     {
         // Find the cusp of the gamut triangle
         LC cusp = find_cusp(a, b);
@@ -319,7 +319,7 @@ namespace ok_color
         return find_gamut_intersection(a, b, L1, C1, L0, cusp);
     }
 
-    RGB gamut_clip_preserve_chroma(RGB rgb)
+    static inline RGB gamut_clip_preserve_chroma(RGB rgb)
     {
         if (rgb.r < 1 && rgb.g < 1 && rgb.b < 1 && rgb.r > 0 && rgb.g > 0 && rgb.b > 0)
             return rgb;
@@ -341,7 +341,7 @@ namespace ok_color
         return oklab_to_linear_srgb({ L_clipped, C_clipped * a_, C_clipped * b_ });
     }
 
-    RGB gamut_clip_project_to_0_5(RGB rgb)
+    static inline RGB gamut_clip_project_to_0_5(RGB rgb)
     {
         if (rgb.r < 1 && rgb.g < 1 && rgb.b < 1 && rgb.r > 0 && rgb.g > 0 && rgb.b > 0)
             return rgb;
@@ -363,7 +363,7 @@ namespace ok_color
         return oklab_to_linear_srgb({ L_clipped, C_clipped * a_, C_clipped * b_ });
     }
 
-    RGB gamut_clip_project_to_L_cusp(RGB rgb)
+    static inline RGB gamut_clip_project_to_L_cusp(RGB rgb)
     {
         if (rgb.r < 1 && rgb.g < 1 && rgb.b < 1 && rgb.r > 0 && rgb.g > 0 && rgb.b > 0)
             return rgb;
@@ -389,7 +389,7 @@ namespace ok_color
         return oklab_to_linear_srgb({ L_clipped, C_clipped * a_, C_clipped * b_ });
     }
 
-    RGB gamut_clip_adaptive_L0_0_5(RGB rgb, float alpha = 0.05f)
+    static inline RGB gamut_clip_adaptive_L0_0_5(RGB rgb, float alpha = 0.05f)
     {
         if (rgb.r < 1 && rgb.g < 1 && rgb.b < 1 && rgb.r > 0 && rgb.g > 0 && rgb.b > 0)
             return rgb;
@@ -413,7 +413,7 @@ namespace ok_color
         return oklab_to_linear_srgb({ L_clipped, C_clipped * a_, C_clipped * b_ });
     }
 
-    RGB gamut_clip_adaptive_L0_L_cusp(RGB rgb, float alpha = 0.05f)
+    static inline RGB gamut_clip_adaptive_L0_L_cusp(RGB rgb, float alpha = 0.05f)
     {
         if (rgb.r < 1 && rgb.g < 1 && rgb.b < 1 && rgb.r > 0 && rgb.g > 0 && rgb.b > 0)
             return rgb;
@@ -442,7 +442,7 @@ namespace ok_color
         return oklab_to_linear_srgb({ L_clipped, C_clipped * a_, C_clipped * b_ });
     }
 
-    float toe(float x)
+    static inline float toe(float x)
     {
         constexpr float k_1 = 0.206f;
         constexpr float k_2 = 0.03f;
@@ -450,7 +450,7 @@ namespace ok_color
         return 0.5f * (k_3 * x - k_1 + sqrtf((k_3 * x - k_1) * (k_3 * x - k_1) + 4 * k_2 * k_3 * x));
     }
 
-    float toe_inv(float x)
+    static inline float toe_inv(float x)
     {
         constexpr float k_1 = 0.206f;
         constexpr float k_2 = 0.03f;
@@ -458,7 +458,7 @@ namespace ok_color
         return (x * x + k_1 * x) / (k_3 * (x + k_2));
     }
 
-    ST to_ST(LC cusp)
+    static inline ST to_ST(LC cusp)
     {
         float L = cusp.L;
         float C = cusp.C;
@@ -468,7 +468,7 @@ namespace ok_color
     // Returns a smooth approximation of the location of the cusp
     // This polynomial was created by an optimization process
     // It has been designed so that S_mid < S_max and T_mid < T_max
-    ST get_ST_mid(float a_, float b_)
+    static inline ST get_ST_mid(float a_, float b_)
     {
         float S = 0.11516993f + 1.f / (+7.44778970f + 4.15901240f * b_ +
                                        a_ * (-2.19557347f + 1.75198401f * b_ + a_ * (-2.13704948f - 10.02301043f * b_ + a_ * (-4.24894561f + 5.38770819f * b_ + 4.69891013f * a_))));
@@ -485,7 +485,7 @@ namespace ok_color
         float C_mid;
         float C_max;
     };
-    Cs get_Cs(float L, float a_, float b_)
+    static inline Cs get_Cs(float L, float a_, float b_)
     {
         LC cusp = find_cusp(a_, b_);
 
@@ -518,7 +518,7 @@ namespace ok_color
         return { C_0, C_mid, C_max };
     }
 
-    RGB okhsl_to_srgb(HSL hsl)
+    static inline RGB okhsl_to_srgb(HSL hsl)
     {
         float h = hsl.h;
         float s = hsl.s;
@@ -576,7 +576,7 @@ namespace ok_color
         };
     }
 
-    HSL srgb_to_okhsl(RGB rgb)
+    static inline HSL srgb_to_okhsl(RGB rgb)
     {
         Lab lab = linear_srgb_to_oklab({ srgb_transfer_function_inv(rgb.r), srgb_transfer_function_inv(rgb.g), srgb_transfer_function_inv(rgb.b) });
 
@@ -620,7 +620,7 @@ namespace ok_color
         return { h, s, l };
     }
 
-    RGB okhsv_to_srgb(HSV hsv)
+    static inline RGB okhsv_to_srgb(HSV hsv)
     {
         float h = hsv.h;
         float s = hsv.s;
@@ -667,7 +667,7 @@ namespace ok_color
         };
     }
 
-    HSV srgb_to_okhsv(RGB rgb)
+    static inline HSV srgb_to_okhsv(RGB rgb)
     {
         Lab lab = linear_srgb_to_oklab({ srgb_transfer_function_inv(rgb.r), srgb_transfer_function_inv(rgb.g), srgb_transfer_function_inv(rgb.b) });
 
@@ -712,7 +712,7 @@ namespace ok_color
         return { h, s, v };
     }
 
-    Lab okhsl_to_oklab(HSL hsl)
+    static inline Lab okhsl_to_oklab(HSL hsl)
     {
         float h = hsl.h;
         float s = hsl.s;
@@ -764,7 +764,7 @@ namespace ok_color
 
         return { L, C * a_, C * b_ };
     }
-    RGB oklab_to_srgb(Lab lab)
+    static inline RGB oklab_to_srgb(Lab lab)
     {
         RGB rgb = oklab_to_linear_srgb(lab);
         return {

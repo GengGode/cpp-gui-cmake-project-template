@@ -39,6 +39,12 @@ class image_watcher
 
     public:
         image_viewer(cv::Mat& image, std::function<void()> callback) : image(std::ref(image)), callback(callback) {};
+        void update()
+        {
+            changed = true;
+            if (callback)
+                callback();
+        }
         void sync_state()
         {
             if (!changed)
@@ -152,11 +158,7 @@ class image_watcher
                 view.zoom /= 1.2f;
             ImGui::SameLine();
             if (ImGui::Button("刷新"))
-            {
-                changed = true;
-                if (callback)
-                    callback();
-            }
+                update();
 
             // 像素信息显示在工具栏
             ImGui::SameLine();
@@ -334,6 +336,11 @@ public:
     void destroy() { viewers.clear(); }
     void watch_image(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { viewers[var_name] = std::move(std::make_unique<image_viewer>(image, callback)); }
     void remove_watcher(const std::string& var_name) { viewers.erase(var_name); }
+    void update_image(const std::string& var_name)
+    {
+        if (auto it = viewers.find(var_name); it != viewers.end())
+            it->second->update();
+    }
     void render()
     {
         ImGui::Begin("图像监视器", nullptr, ImGuiWindowFlags_NoScrollbar);

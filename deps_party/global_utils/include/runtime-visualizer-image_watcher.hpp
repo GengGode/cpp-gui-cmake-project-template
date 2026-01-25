@@ -33,7 +33,6 @@ class image_watcher
         {
             float zoom = 1.0f;
             ImVec2 offset = { 0, 0 };
-            GLuint texture_id = 0;
             std::string pixel_info_text;
         } view;
 
@@ -212,7 +211,7 @@ class image_watcher
             ImVec2 img_min = { canvas_pos.x + view.offset.x, canvas_pos.y + view.offset.y };
             ImVec2 img_max = { img_min.x + img_w, img_min.y + img_h };
 
-            draw_list->AddImage(static_cast<ImTextureID>(static_cast<intptr_t>(view.texture_id)), img_min, img_max);
+            draw_list->AddImage(static_cast<ImTextureID>(static_cast<intptr_t>(texture_id)), img_min, img_max);
             draw_list->AddRect(img_min, img_max, IM_COL32(80, 80, 80, 255));
 
             int img_x = static_cast<int>((mouse_canvas.x - view.offset.x) / view.zoom);

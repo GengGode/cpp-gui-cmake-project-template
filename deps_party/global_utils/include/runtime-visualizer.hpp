@@ -203,19 +203,15 @@ void runtime_visualizer::initialize(bool sync_wait)
         {
             SPDLOG_ERROR("Visualization initialization error: {}", err);
             impl->running = false;
-            if (latch)
-                latch->count_down();
+            latch ? latch->count_down() : void();
             return;
         }
-        if (latch)
-            latch->count_down();
+        latch ? latch->count_down() : void();
         impl->render_loop(impl->main_queue);
         impl->render_destroy();
         impl->running = false;
     });
-
-    if (latch)
-        latch->wait();
+    latch ? latch->wait() : void();
 }
 void runtime_visualizer::destroy()
 {

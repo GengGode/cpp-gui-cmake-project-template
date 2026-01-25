@@ -2,10 +2,9 @@
 #define RUNTIME_VISUALIZER_IMPLEMENTATION
 #include <runtime-visualizer.hpp>
 
+#include <chrono>
 #include <iostream>
 #include <thread>
-
-#include <chrono>
 using namespace std::chrono_literals;
 
 int main(int argc, char* argv[])

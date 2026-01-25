@@ -345,16 +345,11 @@ private:
     }
     void render_splitter()
     {
-        ImGui::Button("##splitter", ImVec2(4, -1));
+        ImGui::Button("##splitter", ImVec2(3, -1));
         if (ImGui::IsItemActive())
-        {
             left_panel_width += ImGui::GetIO().MouseDelta.x;
-            left_panel_width = std::clamp(left_panel_width, 150.0f, 400.0f);
-        }
         if (ImGui::IsItemHovered())
-        {
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
-        }
     }
     void render_viewer_preview()
     {

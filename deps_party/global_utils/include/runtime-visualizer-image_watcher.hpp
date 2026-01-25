@@ -383,3 +383,14 @@ private:
         ImGui::EndChild();
     }
 };
+
+class unique_watch
+{
+public:
+    unique_watch(image_watcher& watcher, const std::string& name, cv::Mat& image) : watcher_(watcher), name_(name) { watcher_.watch_image(name_, image); }
+    ~unique_watch() { watcher_.remove_watcher(name_); }
+
+private:
+    image_watcher& watcher_;
+    std::string name_;
+};

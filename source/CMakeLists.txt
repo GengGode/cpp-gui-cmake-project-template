@@ -59,3 +59,7 @@ target_link_libraries(cpp_gui_cmake_project_template.app PRIVATE
         spdlog::spdlog_header_only
 )
 find_package(OpenCV REQUIRED)
+target_link_libraries(cpp_gui_cmake_project_template.app PRIVATE
+        opencv_core
+        opencv_imgproc
+)

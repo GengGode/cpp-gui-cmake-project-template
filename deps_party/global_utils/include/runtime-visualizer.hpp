@@ -14,6 +14,7 @@ struct runtime_visualizer
     ~runtime_visualizer();
     void initialize(bool sync_wait = false);
     void destroy();
+    void register_destroy(std::function<void()> func);
     void main_render(std::function<void()> func);
     void main_enqueue(std::function<void()> func);
     void main_execute(std::function<void()> func);
@@ -76,6 +77,7 @@ struct runtime_visualizer
 struct runtime_visualizer::impl_t
 {
     tbb::concurrent_queue<std::function<void()>> main_queue = {};
+    tbb::concurrent_queue<std::function<void()>> destroy_queue = {};
 
     std::function<void()> main_render_func = {};
     std::mutex main_render_mutex = {};
@@ -166,6 +168,9 @@ struct runtime_visualizer::impl_t
 
     void render_destroy()
     {
+        std::function<void()> task;
+        while (destroy_queue.try_pop(task) && task)
+            task();
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         if (window)
@@ -219,6 +224,10 @@ void runtime_visualizer::destroy()
         impl->running = false;
     if (impl->render_thread.joinable())
         impl->render_thread.join();
+}
+void runtime_visualizer::register_destroy(std::function<void()> func)
+{
+    impl->destroy_queue.push(func);
 }
 void runtime_visualizer::main_render(std::function<void()> func)
 {

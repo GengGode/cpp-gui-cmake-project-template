@@ -24,7 +24,6 @@ class image_watcher
         GLuint texture_id = 0;
         GLuint texture_width = 0;
         GLuint texture_height = 0;
-        GLuint thumb_texture_id = 0;
         GLuint thumb_texture_width = 0;
         GLuint thumb_texture_height = 0;
         std::string type_info;
@@ -107,7 +106,6 @@ class image_watcher
                 float scale = std::min(thumb_max_dim / img.cols, thumb_max_dim / img.rows);
                 thumb_texture_width = static_cast<int>(img.cols * scale);
                 thumb_texture_height = static_cast<int>(img.rows * scale);
-                thumb_texture_id = texture_id;
             }
 
             changed = false;
@@ -117,9 +115,9 @@ class image_watcher
             expanded = ImGui::TreeNodeEx(name.data(), ImGuiTreeNodeFlags_AllowOverlap | (expanded ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (selected ? ImGuiTreeNodeFlags_Selected : 0));
             if (!expanded)
                 return;
-            if (empty || thumb_texture_id == 0)
+            if (empty || texture_id == 0)
                 return ImGui::TreePop();
-            ImGui::Image(static_cast<ImTextureID>(static_cast<intptr_t>(thumb_texture_id)), ImVec2(thumb_texture_width, thumb_texture_height));
+            ImGui::Image(static_cast<ImTextureID>(static_cast<intptr_t>(texture_id)), ImVec2(thumb_texture_width, thumb_texture_height));
             ImGui::SameLine();
             ImGui::TextDisabled("%d x %d\n%s\ncv::Mat", texture_width, texture_height, type_info.c_str());
             ImGui::TreePop();
@@ -341,6 +339,23 @@ public:
         if (auto it = viewers.find(var_name); it != viewers.end())
             it->second->update();
     }
+
+public:
+    class unique_visitor
+    {
+        image_watcher& watcher;
+        std::string var_name;
+
+    public:
+        unique_visitor(image_watcher& watcher, const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) : watcher(watcher), var_name(var_name)
+        {
+            watcher.watch_image(var_name, image, callback);
+        }
+        ~unique_visitor() { watcher.remove_watcher(var_name); }
+    };
+    unique_visitor visitor(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { return unique_visitor(*this, var_name, image, callback); }
+
+public:
     void render()
     {
         ImGui::Begin("图像监视器", nullptr, ImGuiWindowFlags_NoScrollbar);

@@ -14,7 +14,8 @@ class image_watcher
 {
     class image_viewer
     {
-        std::reference_wrapper<cv::Mat> image;
+        std::string name;
+        std::reference_wrapper<const cv::Mat> image;
         std::function<void()> callback;
 
         bool empty = true;
@@ -37,7 +38,7 @@ class image_watcher
         } view;
 
     public:
-        image_viewer(cv::Mat& image, std::function<void()> callback) : image(std::ref(image)), callback(callback) {};
+        image_viewer(const std::string& name, const cv::Mat& image, std::function<void()> callback) : name(name), image(std::ref(image)), callback(callback) {};
         void update()
         {
             changed = true;
@@ -96,7 +97,7 @@ class image_watcher
                 }
                 return rgba;
             };
-            cv::Mat& img = image.get();
+            const cv::Mat& img = image.get();
             empty = img.empty();
             if (!empty)
             {
@@ -110,7 +111,7 @@ class image_watcher
 
             changed = false;
         }
-        void render_thumbnail(std::string_view name, bool selected)
+        void render_thumbnail(bool selected)
         {
             expanded = ImGui::TreeNodeEx(name.data(), ImGuiTreeNodeFlags_AllowOverlap | (expanded ? ImGuiTreeNodeFlags_DefaultOpen : 0) | (selected ? ImGuiTreeNodeFlags_Selected : 0));
             if (!expanded)
@@ -122,7 +123,7 @@ class image_watcher
             ImGui::TextDisabled("%d x %d\n%s\ncv::Mat", texture_width, texture_height, type_info.c_str());
             ImGui::TreePop();
         }
-        void render_preview(std::string_view selected_name)
+        void render_preview()
         {
             // 工具栏
             ImGui::Text("缩放: %.1f%%", view.zoom * 100);
@@ -332,7 +333,7 @@ class image_watcher
 
 public:
     void destroy() { viewers.clear(); }
-    void watch_image(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { viewers[var_name] = std::move(std::make_unique<image_viewer>(image, callback)); }
+    void watch_image(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { viewers[var_name] = std::move(std::make_unique<image_viewer>(var_name, image, callback)); }
     void remove_watcher(const std::string& var_name) { viewers.erase(var_name); }
     void update_image(const std::string& var_name)
     {
@@ -375,7 +376,7 @@ private:
         for (auto& [name, viewer] : viewers)
         {
             viewer->sync_state();
-            viewer->render_thumbnail(name, (name == selected_name));
+            viewer->render_thumbnail((name == selected_name));
             if (ImGui::IsItemClicked())
                 selected_name = name;
         }
@@ -400,8 +401,7 @@ private:
             return;
         }
 
-        auto& viewer = viewers[selected_name];
-        viewer->render_preview(selected_name);
+        viewers[selected_name]->render_preview();
         ImGui::EndChild();
     }
 };

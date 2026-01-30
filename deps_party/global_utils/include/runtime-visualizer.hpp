@@ -47,12 +47,14 @@ struct runtime_visualizer
     #else
         #error "<tbb/concurrent_queue.h> is required for runtime_visualizer implementation"
     #endif
-    #if __has_include(<spdlog/spdlog.h>)
+    #if __has_include(<spdlog/spdlog.h>) && RUNTIME_VISUALIZER_ENABLE_LOGGING
         #include <spdlog/spdlog.h>
     #else
         #define SPDLOG_ERROR(...) ((void)0)
         #define SPDLOG_INFO(...) ((void)0)
-        #warning "<spdlog/spdlog.h> not found, logging disabled in runtime_visualizer implementation"
+        #if RUNTIME_VISUALIZER_ENABLE_LOGGING
+            #warning "<spdlog/spdlog.h> not found, logging disabled in runtime_visualizer implementation"
+        #endif
     #endif
     #if defined(_WIN32) || defined(_WIN64)
         #ifndef WIN32_LEAN_AND_MEAN

@@ -132,7 +132,7 @@ struct runtime_visualizer::impl_t
         return nullptr;
     }
 
-    void render_loop(tbb::concurrent_queue<std::function<void()>>& queue)
+    void render_loop()
     {
         while (running)
         {
@@ -146,7 +146,7 @@ struct runtime_visualizer::impl_t
             }
 
             std::function<void()> task;
-            while (queue.try_pop(task) && task)
+            while (main_queue.try_pop(task) && task)
                 task();
 
             ImGui_ImplOpenGL3_NewFrame();
@@ -214,7 +214,7 @@ void runtime_visualizer::initialize(bool sync_wait)
             return;
         }
         latch ? latch->count_down() : void();
-        impl->render_loop(impl->main_queue);
+        impl->render_loop();
         impl->render_destroy();
         impl->running = false;
     });

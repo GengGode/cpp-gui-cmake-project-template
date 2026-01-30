@@ -14,6 +14,7 @@ struct runtime_visualizer
     ~runtime_visualizer();
     void initialize(bool sync_wait = false);
     void destroy();
+    void register_initialize(std::function<void()> func);
     void register_destroy(std::function<void()> func);
     void main_render(std::function<void()> func);
     void main_enqueue(std::function<void()> func);
@@ -79,6 +80,7 @@ struct runtime_visualizer
 struct runtime_visualizer::impl_t
 {
     tbb::concurrent_queue<std::function<void()>> main_queue = {};
+    tbb::concurrent_queue<std::function<void()>> initialize_queue = {};
     tbb::concurrent_queue<std::function<void()>> destroy_queue = {};
 
     std::function<void()> main_render_func = {};
@@ -130,6 +132,10 @@ struct runtime_visualizer::impl_t
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
         io.IniFilename = nullptr;                             // disable imgui.ini
         io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\msyh.ttc", 20.0f, nullptr, io.Fonts->GetGlyphRangesChineseFull());
+
+        std::function<void()> task;
+        while (initialize_queue.try_pop(task) && task)
+            task();
         return nullptr;
     }
 
@@ -227,6 +233,10 @@ void runtime_visualizer::destroy()
         impl->running = false;
     if (impl->render_thread.joinable())
         impl->render_thread.join();
+}
+void runtime_visualizer::register_initialize(std::function<void()> func)
+{
+    impl->initialize_queue.push(func);
 }
 void runtime_visualizer::register_destroy(std::function<void()> func)
 {

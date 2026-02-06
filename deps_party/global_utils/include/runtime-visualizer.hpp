@@ -16,6 +16,7 @@ struct runtime_visualizer
     void destroy();
     void register_initialize(std::function<void()> func);
     void register_destroy(std::function<void()> func);
+    void register_drop(std::function<void(int, const char**)> func);
     void main_render(std::function<void()> func);
     void main_enqueue(std::function<void()> func);
     void main_execute(std::function<void()> func);
@@ -83,6 +84,9 @@ struct runtime_visualizer::impl_t
     tbb::concurrent_queue<std::function<void()>> initialize_queue = {};
     tbb::concurrent_queue<std::function<void()>> destroy_queue = {};
 
+    std::function<void(int, const char**)> drop_callback_func = {};
+    std::mutex drop_callback_mutex = {};
+
     std::function<void()> main_render_func = {};
     std::mutex main_render_mutex = {};
 
@@ -117,6 +121,14 @@ struct runtime_visualizer::impl_t
         glfwMakeContextCurrent(glfw_window);
         glfwShowWindow(glfw_window);
         glfwSwapInterval(1);
+
+        glfwSetWindowUserPointer(glfw_window, this);
+        glfwSetDropCallback(glfw_window, [](GLFWwindow* window, int count, const char** paths) {
+            auto impl = static_cast<impl_t*>(glfwGetWindowUserPointer(window));
+            std::lock_guard<std::mutex> lock(impl->drop_callback_mutex);
+            if (impl && impl->drop_callback_func && count > 0 && paths)
+                impl->drop_callback_func(count, paths);
+        });
 
         if (!gladLoadGL())
             return "Failed to initialize GLAD";
@@ -241,6 +253,11 @@ void runtime_visualizer::register_initialize(std::function<void()> func)
 void runtime_visualizer::register_destroy(std::function<void()> func)
 {
     impl->destroy_queue.push(func);
+}
+void runtime_visualizer::register_drop(std::function<void(int, const char**)> func)
+{
+    std::lock_guard<std::mutex> lock(impl->drop_callback_mutex);
+    impl->drop_callback_func = func;
 }
 void runtime_visualizer::main_render(std::function<void()> func)
 {

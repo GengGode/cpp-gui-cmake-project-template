@@ -82,18 +82,23 @@ public:
 private:
     void request_sweep() const
     {
+        ++dead_count;
         if (emitting_count > 0)
+            pending_sweep = true;
+        else if (dead_count < static_cast<int>(slots.size()) >> 2)
             pending_sweep = true;
         else
             const_cast<signal*>(this)->sweep();
     }
     void sweep()
     {
+        dead_count = 0;
         pending_sweep = false;
         slots.erase(std::remove_if(slots.begin(), slots.end(), [](auto& s) { return !s || !s->alive; }), slots.end());
     }
     std::vector<std::shared_ptr<entry>> slots;
     mutable int emitting_count = 0;
+    mutable int dead_count = 0;
     mutable bool pending_sweep = false;
 };
 

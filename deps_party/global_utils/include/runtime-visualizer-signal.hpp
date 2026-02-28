@@ -59,16 +59,15 @@ public:
     void disconnect_all()
     {
         for (auto& s : slots)
-            if (s)
-                s->alive = false;
+            s->alive = false;
         request_sweep();
     }
 
     void emit(Args... args) const
     {
         ++emitting_count;
-        for (auto& s : slots)
-            if (s && s->alive)
+        for (const auto& s : slots)
+            if (s->alive)
                 s->fn(args...);
         --emitting_count;
         if (emitting_count == 0 && pending_sweep)
@@ -102,10 +101,8 @@ private:
     mutable bool pending_sweep = false;
 };
 
-template <typename Connection> class scoped_connection
+template <typename Connection> struct scoped_connection
 {
-public:
-    scoped_connection() = default;
     scoped_connection(Connection conn) : conn(std::move(conn)) {}
     ~scoped_connection() { conn.disconnect(); }
     scoped_connection(const scoped_connection&) = delete;
@@ -114,10 +111,8 @@ public:
     scoped_connection& operator=(scoped_connection&& other) noexcept
     {
         if (this != &other)
-        {
             conn.disconnect();
-            conn = std::move(other.conn);
-        }
+        conn = std::move(other.conn);
         return *this;
     }
 

@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <functional>
+#include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 template <typename... Args> struct signal : public std::enable_shared_from_this<signal<Args...>>
@@ -55,14 +57,12 @@ public:
         slots.push_back(slot_entry);
         return connection(this->shared_from_this(), slot_entry);
     }
-
     void disconnect_all()
     {
         for (auto& s : slots)
             s->alive = false;
         request_sweep();
     }
-
     void emit(Args... args) const
     {
         ++emitting_count;
@@ -73,10 +73,17 @@ public:
         if (emitting_count == 0 && pending_sweep)
             const_cast<signal*>(this)->sweep();
     }
-
     void operator()(Args... args) const { emit(args...); }
-
     bool empty() const { return slots.empty(); }
+
+public:
+    std::map<std::string, connection> named_connections;
+    connection connect(std::string name, slot_t slot)
+    {
+        auto connection = connect(std::move(slot));
+        named_connections[name] = connection;
+        return connection;
+    }
 
 private:
     void request_sweep() const
@@ -95,6 +102,7 @@ private:
         pending_sweep = false;
         slots.erase(std::remove_if(slots.begin(), slots.end(), [](auto& s) { return !s || !s->alive; }), slots.end());
     }
+
     std::vector<std::shared_ptr<entry>> slots;
     mutable int emitting_count = 0;
     mutable int dead_count = 0;

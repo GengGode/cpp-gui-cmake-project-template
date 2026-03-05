@@ -17,9 +17,12 @@ struct runtime_visualizer
     void register_initialize(std::function<void()> func);
     void register_destroy(std::function<void()> func);
     void register_drop(std::function<void(int, const char**)> func);
-    void main_render(std::function<void()> func);
-    void main_enqueue(std::function<void()> func);
-    void main_execute(std::function<void()> func);
+    void register_event(std::function<void()> func);
+    void register_render(std::function<void()> func);
+    void event_enqueue(std::function<void()> func);
+    void event_execute(std::function<void()> func);
+    void render_enqueue(std::function<void()> func);
+    void render_execute(std::function<void()> func);
     void wait_exit();
 };
 
@@ -46,8 +49,14 @@ struct runtime_visualizer
     #endif
     #if __has_include(<tbb/concurrent_queue.h>)
         #include <tbb/concurrent_queue.h>
+        #define safe_concurrent_queue tbb::concurrent_queue
     #else
-        #error "<tbb/concurrent_queue.h> is required for runtime_visualizer implementation"
+        #if __has_include(<concurrent_queue.h>)
+            #include <concurrent_queue.h>
+            #define safe_concurrent_queue concurrent_queue
+        #else
+            #error "<tbb/concurrent_queue.h> or<concurrent_queue.h> is required for runtime_visualizer implementation"
+        #endif
     #endif
     #if __has_include(<spdlog/spdlog.h>) && RUNTIME_VISUALIZER_ENABLE_LOGGING
         #include <spdlog/spdlog.h>
@@ -80,22 +89,22 @@ struct runtime_visualizer
 
 struct runtime_visualizer::impl_t
 {
-    tbb::concurrent_queue<std::function<void()>> main_queue = {};
-    tbb::concurrent_queue<std::function<void()>> initialize_queue = {};
-    tbb::concurrent_queue<std::function<void()>> destroy_queue = {};
+    safe_concurrent_queue<std::function<void()>> initialize_queue = {};
+    safe_concurrent_queue<std::function<void()>> destroy_queue = {};
+    safe_concurrent_queue<std::function<void()>> event_queue = {};
+    safe_concurrent_queue<std::function<void()>> render_queue = {};
+    std::function<void()> event_func = {};
+    std::function<void()> render_func = {};
 
     std::function<void(int, const char**)> drop_callback_func = {};
     std::mutex drop_callback_mutex = {};
 
-    std::function<void()> main_render_func = {};
-    std::mutex main_render_mutex = {};
-
+    std::thread event_thread = {};
     std::thread render_thread = {};
     std::shared_ptr<GLFWwindow> window = {};
     std::atomic<bool> running = false;
-    std::atomic<bool> ready = false;
 
-    const char* render_initialize()
+    const char* main_initialize()
     {
         glfwSetErrorCallback([](int error, const char* desc) { SPDLOG_ERROR("GLFW Error {}: {}", error, desc); });
         if (!glfwInit())
@@ -118,9 +127,6 @@ struct runtime_visualizer::impl_t
             window.reset();
             return "Failed to initialize ImGui for GLFW";
         }
-        glfwMakeContextCurrent(glfw_window);
-        glfwShowWindow(glfw_window);
-        glfwSwapInterval(1);
 
         glfwSetWindowUserPointer(glfw_window, this);
         glfwSetDropCallback(glfw_window, [](GLFWwindow* window, int count, const char** paths) {
@@ -129,6 +135,16 @@ struct runtime_visualizer::impl_t
             if (impl && impl->drop_callback_func && count > 0 && paths)
                 impl->drop_callback_func(count, paths);
         });
+
+        glfwMakeContextCurrent(NULL);
+        glfwShowWindow(glfw_window);
+        return nullptr;
+    }
+
+    const char* render_initialize()
+    {
+        glfwMakeContextCurrent(window.get());
+        glfwSwapInterval(1);
 
         if (!gladLoadGL())
             return "Failed to initialize GLAD";
@@ -153,26 +169,18 @@ struct runtime_visualizer::impl_t
 
     void render_loop()
     {
-        while (running)
+        while (running.load(std::memory_order_relaxed))
         {
-            glfwPollEvents();
-            if (glfwWindowShouldClose(window.get()))
-                break;
-            if (glfwGetWindowAttrib(window.get(), GLFW_ICONIFIED) != 0)
-            {
-                ImGui_ImplGlfw_Sleep(10);
-                continue;
-            }
-
             std::function<void()> task;
-            while (main_queue.try_pop(task) && task)
+            while (render_queue.try_pop(task) && task)
                 task();
 
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
-            render_window();
+            if (render_func)
+                render_func();
 
             // Rendering
             ImGui::Render();
@@ -194,16 +202,36 @@ struct runtime_visualizer::impl_t
             task();
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+        glfwMakeContextCurrent(NULL);
+    }
+
+    void main_destroy()
+    {
         if (window)
             window.reset();
         glfwTerminate();
-        ImGui::DestroyContext();
     }
-    void render_window()
+
+    void event_loop()
     {
-        std::lock_guard<std::mutex> lock(main_render_mutex);
-        if (main_render_func)
-            main_render_func();
+        while (running.load(std::memory_order_relaxed))
+        {
+            glfwPollEvents();
+            if (glfwWindowShouldClose(window.get()))
+                break;
+            if (glfwGetWindowAttrib(window.get(), GLFW_ICONIFIED) != 0)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
+            std::function<void()> task;
+            while (event_queue.try_pop(task) && task)
+                task();
+            if (event_func)
+                event_func();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
     }
 };
 
@@ -222,20 +250,32 @@ void runtime_visualizer::initialize(bool sync_wait)
 
     auto latch = sync_wait ? std::make_shared<std::latch>(1) : nullptr;
 
-    impl->render_thread = std::thread([this, latch]() {
+    impl->event_thread = std::thread([this, latch]() {
         impl->running = true;
-        set_current_thread_description("User Visualization Thread");
-        if (auto err = impl->render_initialize(); err != nullptr)
+        set_current_thread_description("User Visualization Event Thread");
+        if (auto err = impl->main_initialize(); err != nullptr)
         {
             SPDLOG_ERROR("Visualization initialization error: {}", err);
             impl->running = false;
-            latch ? latch->count_down() : void();
-            return;
+            return latch ? latch->count_down() : void();
         }
-        latch ? latch->count_down() : void();
-        impl->render_loop();
-        impl->render_destroy();
+        impl->render_thread = std::thread([this, latch]() {
+            set_current_thread_description("User Visualization Opengl Thread");
+            if (auto err = impl->render_initialize(); err != nullptr)
+            {
+                SPDLOG_ERROR("Visualization render initialization error: {}", err);
+                impl->running = false;
+                return latch ? latch->count_down() : void();
+            }
+            latch ? latch->count_down() : void();
+            impl->render_loop();
+            impl->render_destroy();
+        });
+        impl->event_loop();
         impl->running = false;
+        if (impl->render_thread.joinable())
+            impl->render_thread.join();
+        impl->main_destroy();
     });
     latch ? latch->wait() : void();
 }
@@ -243,8 +283,8 @@ void runtime_visualizer::destroy()
 {
     if (impl->running)
         impl->running = false;
-    if (impl->render_thread.joinable())
-        impl->render_thread.join();
+    if (impl->event_thread.joinable())
+        impl->event_thread.join();
 }
 void runtime_visualizer::register_initialize(std::function<void()> func)
 {
@@ -259,19 +299,35 @@ void runtime_visualizer::register_drop(std::function<void(int, const char**)> fu
     std::lock_guard<std::mutex> lock(impl->drop_callback_mutex);
     impl->drop_callback_func = func;
 }
-void runtime_visualizer::main_render(std::function<void()> func)
+void runtime_visualizer::register_event(std::function<void()> func)
 {
-    std::lock_guard<std::mutex> lock(impl->main_render_mutex);
-    impl->main_render_func = func;
+    impl->event_func = func;
 }
-void runtime_visualizer::main_enqueue(std::function<void()> func)
+void runtime_visualizer::register_render(std::function<void()> func)
 {
-    impl->main_queue.push(func);
+    impl->render_func = func;
 }
-void runtime_visualizer::main_execute(std::function<void()> func)
+void runtime_visualizer::event_enqueue(std::function<void()> func)
+{
+    impl->event_queue.push(func);
+}
+void runtime_visualizer::event_execute(std::function<void()> func)
 {
     std::latch promise(1);
-    impl->main_queue.push([&promise, func]() {
+    impl->event_queue.push([&promise, func]() {
+        func();
+        promise.count_down();
+    });
+    promise.wait();
+}
+void runtime_visualizer::render_enqueue(std::function<void()> func)
+{
+    impl->render_queue.push(func);
+}
+void runtime_visualizer::render_execute(std::function<void()> func)
+{
+    std::latch promise(1);
+    impl->render_queue.push([&promise, func]() {
         func();
         promise.count_down();
     });
@@ -279,7 +335,8 @@ void runtime_visualizer::main_execute(std::function<void()> func)
 }
 void runtime_visualizer::wait_exit()
 {
-    if (impl->render_thread.joinable())
-        impl->render_thread.join();
+    if (impl->event_thread.joinable())
+        impl->event_thread.join();
 }
+    #undef safe_concurrent_queue
 #endif

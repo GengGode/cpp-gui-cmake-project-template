@@ -53,7 +53,7 @@ struct runtime_visualizer
     #else
         #if __has_include(<concurrent_queue.h>)
             #include <concurrent_queue.h>
-            #define safe_concurrent_queue concurrent_queue
+            #define safe_concurrent_queue Concurrency::concurrent_queue
         #else
             #error "<tbb/concurrent_queue.h> or<concurrent_queue.h> is required for runtime_visualizer implementation"
         #endif
@@ -171,6 +171,17 @@ struct runtime_visualizer::impl_t
     {
         while (running.load(std::memory_order_relaxed))
         {
+            if (glfwWindowShouldClose(window.get()))
+            {
+                running = false;
+                break;
+            }
+            if (glfwGetWindowAttrib(window.get(), GLFW_ICONIFIED) != 0)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
+
             std::function<void()> task;
             while (render_queue.try_pop(task) && task)
                 task();
@@ -217,20 +228,12 @@ struct runtime_visualizer::impl_t
     {
         while (running.load(std::memory_order_relaxed))
         {
-            glfwPollEvents();
-            if (glfwWindowShouldClose(window.get()))
-                break;
-            if (glfwGetWindowAttrib(window.get(), GLFW_ICONIFIED) != 0)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                continue;
-            }
+            glfwWaitEvents();
             std::function<void()> task;
             while (event_queue.try_pop(task) && task)
                 task();
             if (event_func)
                 event_func();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 };
@@ -281,10 +284,8 @@ void runtime_visualizer::initialize(bool sync_wait)
 }
 void runtime_visualizer::destroy()
 {
-    if (impl->running)
-        impl->running = false;
-    if (impl->event_thread.joinable())
-        impl->event_thread.join();
+    impl->running = false;
+    wait_exit();
 }
 void runtime_visualizer::register_initialize(std::function<void()> func)
 {

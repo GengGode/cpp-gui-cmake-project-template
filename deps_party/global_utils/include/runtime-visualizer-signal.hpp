@@ -109,6 +109,8 @@ private:
     mutable bool pending_sweep = false;
 };
 
+template <typename... Args> using signal_ptr = std::shared_ptr<signal<Args...>>;
+
 template <typename Connection> struct scoped_connection
 {
     scoped_connection(Connection conn) : conn(std::move(conn)) {}

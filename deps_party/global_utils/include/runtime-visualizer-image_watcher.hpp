@@ -1,13 +1,15 @@
 #pragma once
-#include <imgui.h>
-#include <opencv2/core.hpp>
+#include "runtime-visualizer-signal.hpp"
 
+#include <imgui.h>
+
+#include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 class image_watcher
@@ -16,7 +18,6 @@ class image_watcher
     {
         std::string name;
         std::reference_wrapper<const cv::Mat> image;
-        std::function<void()> callback;
 
         bool empty = true;
         bool changed = true;
@@ -29,21 +30,28 @@ class image_watcher
         GLuint thumb_texture_height = 0;
         std::string type_info;
 
+    public:
+        signal_ptr<> on_updated = signal<>::create();
+
+    public:
         struct viewer_state
         {
             float zoom = 1.0f;
             ImVec2 offset = { 0, 0 };
             std::string pixel_info_text;
             bool need_fit = true;
-        } view;
+        };
+
+    private:
+        viewer_state view;
 
     public:
-        image_viewer(const std::string& name, const cv::Mat& image, std::function<void()> callback) : name(name), image(std::ref(image)), callback(callback) {};
+        image_viewer(const std::string& name, const cv::Mat& image) : name(name), image(std::ref(image)) {}
+        signal_ptr<> get_signal() { return on_updated; }
         void update()
         {
             changed = true;
-            if (callback)
-                callback();
+            on_updated->emit();
         }
         void sync_state()
         {
@@ -333,7 +341,13 @@ class image_watcher
 
 public:
     void destroy() { viewers.clear(); }
-    void watch_image(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { viewers[var_name] = std::move(std::make_unique<image_viewer>(var_name, image, callback)); }
+    signal_ptr<> watch_image(const std::string& var_name, cv::Mat& image)
+    {
+        auto viewer = std::make_unique<image_viewer>(var_name, image);
+        auto sig = viewer->get_signal();
+        viewers[var_name] = std::move(viewer);
+        return sig;
+    }
     void remove_watcher(const std::string& var_name) { viewers.erase(var_name); }
     void update_image(const std::string& var_name)
     {
@@ -346,15 +360,19 @@ public:
     {
         image_watcher& watcher;
         std::string var_name;
+        using conn_t = scoped_connection<signal<>::connection>;
+        std::optional<conn_t> conn;
 
     public:
         unique_visitor(image_watcher& watcher, const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) : watcher(watcher), var_name(var_name)
         {
-            watcher.watch_image(var_name, image, callback);
+            auto sig = watcher.watch_image(var_name, image);
+            if (callback)
+                conn.emplace(sig->connect(std::move(callback)));
         }
         ~unique_visitor() { watcher.remove_watcher(var_name); }
     };
-    unique_visitor visitor(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { return unique_visitor(*this, var_name, image, callback); }
+    unique_visitor visitor(const std::string& var_name, cv::Mat& image, std::function<void()> callback = {}) { return unique_visitor(*this, var_name, image, std::move(callback)); }
 
 public:
     void render()

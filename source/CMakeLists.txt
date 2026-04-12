@@ -8,6 +8,10 @@ if (MSVC)
             $<$<COMPILE_LANGUAGE:CXX>:/Zc:preprocessor>
             $<$<COMPILE_LANGUAGE:CXX>:/std:c++23preview>
     )
+    # set debug working directory for MSVC
+    set_target_properties(cpp_gui_cmake_project_template.app PROPERTIES
+        VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:cpp_gui_cmake_project_template.app>"
+    )
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(cpp_gui_cmake_project_template.app
         PRIVATE
@@ -32,6 +36,7 @@ target_sources(cpp_gui_cmake_project_template.app
     PRIVATE
         app.cpp
 )
+
 
 find_package(global_utils CONFIG REQUIRED)
 target_link_libraries(cpp_gui_cmake_project_template.app
@@ -58,8 +63,14 @@ target_link_libraries(cpp_gui_cmake_project_template.app PRIVATE
         fmt::fmt-header-only
         spdlog::spdlog_header_only
 )
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(cpp_gui_cmake_project_template.app PRIVATE
+        nlohmann_json::nlohmann_json
+)
+
 find_package(OpenCV REQUIRED)
 target_link_libraries(cpp_gui_cmake_project_template.app PRIVATE
         opencv_core
         opencv_imgproc
+        opencv_imgcodecs
 )

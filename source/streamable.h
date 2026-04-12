@@ -55,15 +55,24 @@ namespace detail
 
             if (in.rows < context_)
             {
-                cv::Mat merged;
-                cv::vconcat(pending_chunk_, in, merged);
-                pending_chunk_ = merged;
-                return std::nullopt;
+                cv::vconcat(pending_chunk_, in, pending_chunk_);
+
+                if (pending_chunk_.rows <= context_)
+                    return std::nullopt;
+
+                int split = pending_chunk_.rows - context_;
+                in = pending_chunk_.rowRange(split, pending_chunk_.rows).clone();
+                pending_chunk_ = pending_chunk_.rowRange(0, split).clone();
             }
 
             cv::Mat result = process_pending(in);
 
-            prev_raw_tail_ = pending_chunk_.rowRange(std::max(0, pending_chunk_.rows - context_), pending_chunk_.rows).clone();
+            cv::Mat raw_history;
+            if (!prev_raw_tail_.empty())
+                cv::vconcat(prev_raw_tail_, pending_chunk_, raw_history);
+            else
+                raw_history = pending_chunk_;
+            prev_raw_tail_ = raw_history.rowRange(std::max(0, raw_history.rows - context_), raw_history.rows).clone();
             pending_chunk_ = in.clone();
 
             return result;
@@ -89,8 +98,8 @@ namespace detail
 
             if (!cached_overlap_.empty() && blend_rows_ > 0)
             {
-                int bh = std::min(blend_rows_, valid_rows);
-                cv::Mat blended = blend_(cached_overlap_, block.rowRange(0, bh));
+                int bh = std::min(blend_rows_, std::min(valid_rows, cached_overlap_.rows));
+                cv::Mat blended = blend_(cached_overlap_.rowRange(0, bh), block.rowRange(0, bh));
                 blended.copyTo(block.rowRange(0, bh));
             }
 
@@ -120,8 +129,8 @@ namespace detail
 
             if (!cached_overlap_.empty() && blend_rows_ > 0)
             {
-                int bh = std::min(blend_rows_, valid_rows);
-                cv::Mat blended = blend_(cached_overlap_, block.rowRange(0, bh));
+                int bh = std::min(blend_rows_, std::min(valid_rows, cached_overlap_.rows));
+                cv::Mat blended = blend_(cached_overlap_.rowRange(0, bh), block.rowRange(0, bh));
                 blended.copyTo(block.rowRange(0, bh));
             }
 

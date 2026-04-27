@@ -11,6 +11,7 @@ macro(set_vcpkg_config)
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "Manifest mode")  
     set(VCPKG_MANIFEST_DIR ${CMAKE_SOURCE_DIR} CACHE PATH "Manifest directory")
     set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_TARGET_TRIPLET} CACHE STRING "Vcpkg target triplet")
+    set(VCPKG_HOST_TRIPLET $ENV{VCPKG_HOST_TRIPLET} CACHE STRING "Vcpkg host triplet")
     set(VCPKG_INSTALLED_DIR ${CMAKE_BINARY_DIR}/vcpkg_installed)
 endmacro(set_vcpkg_config)
  
@@ -40,6 +41,18 @@ else()
     # load VCPKG_TARGET_TRIPLET from the environment
     if(DEFINED ENV{VCPKG_TARGET_TRIPLET})
         message(STATUS "VCPKG_TARGET_TRIPLET found in the environment: ${VCPKG_TARGET_TRIPLET}")
+    endif()
+endif()
+
+# load VCPKG_HOST_TRIPLET from the .vcpkg-host-triplet file
+if(EXISTS "${CMAKE_SOURCE_DIR}/.vcpkg-host-triplet")
+    file(STRINGS "${CMAKE_SOURCE_DIR}/.vcpkg-host-triplet" VCPKG_HOST_TRIPLET)
+    set(ENV{VCPKG_HOST_TRIPLET} "${VCPKG_HOST_TRIPLET}")
+    message(STATUS "VCPKG_HOST_TRIPLET found in the .vcpkg-host-triplet file: ${VCPKG_HOST_TRIPLET}")
+else()
+    # load VCPKG_HOST_TRIPLET from the environment
+    if(DEFINED ENV{VCPKG_HOST_TRIPLET})
+        message(STATUS "VCPKG_HOST_TRIPLET found in the environment: ${VCPKG_HOST_TRIPLET}")
     endif()
 endif()
 
